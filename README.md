@@ -1,4 +1,4 @@
-Wordell 🌐
+# Wordell 🌐
 
 Wordell is a powerful WordPress enumeration script designed to make your WordPress security assessments more efficient and comprehensive. It enables you to enumerate sitemaps, discover usernames, gather WordPress logins, capture screenshots, and generate random IP addresses with geo data. With Wordell, you can enhance your WordPress security testing process and identify potential vulnerabilities in your WordPress installations.
 
