@@ -6,8 +6,6 @@ R='\e[31m'
 M='\e[35m'
 C='\e[36m'
 
-#wc -l
-
 help_menu(){
 	echo -e "${C}Example Usage${G}: ${Y}$(basename $0) ${G}[-h] [-u] [-c] [-p] [-s] [-w] [-f] [-r] [-v] [-g]"
 	echo ""
@@ -72,7 +70,7 @@ while getopts ":hucpswfrvg" menu; do
 				else
 					echo -e "${Y}[${R}~${Y}] ${G}WordPress Version Not Found"
 				fi
-				
+
 				if wget --spider $2/wp-login.php &> /dev/null; then
 					echo -e "${Y}[${G}+${Y}] ${G}Login Found${Y}:${C} $2/wp-login.php"
 				else
@@ -147,10 +145,11 @@ while getopts ":hucpswfrvg" menu; do
 			for crawl_subnet in $list_http_server_range; do
 				if curl -s -k --connect-timeout 3 "$crawl_subnet" | grep "WordPress" &>/dev/null; then
 					echo -e "${Y}[${G}+${Y}] ${G}$crawl_subnet ${Y}: ${G}Found WordPress"
-				else
-					echo -e "${Y}[${R}~${Y}] ${R}$crawl_subnet ${Y}: ${R}WordPress Not Found"
+					echo "[+] $crawl_subnet : Found WordPress" >> wordpress.txt
 				fi
 			done
+			count=$(cat wordpress.txt | wc -l)
+			echo "Found $count results"
 			;;
 		p)
 			ascii
@@ -210,6 +209,7 @@ while getopts ":hucpswfrvg" menu; do
 			httpx -silent $wordpress_hosts | while read wordpress_http; do
 			if [ $(curl -s --connect-timeout 3 $wordpress_http | grep "WordPress") ]; then
 				echo "Found WordPress: $wordpress_http"
+				#echo "Found WordPress: $wordpress_http"
 			else
 				echo "Wordpress not found: $wordpress_http"
 			fi
@@ -217,21 +217,18 @@ while getopts ":hucpswfrvg" menu; do
 	done
 			;;
 		r)
+			trap 'rm robots.txt &>/dev/null || echo "" &>/dev/null' INT
 			subnet=$(echo "$2/24" | httpx -silent)
 			for data in $subnet; do
 				response=$(curl -k --silent --connect-timeout 3 "$data/robots.txt" | grep HTTP | awk '{print $2}')
 				if [ "$response" == "200" ]; then
 					echo "Found: $data/robots.txt"
-					while getopts ":v" menu_2; do
-						case $menu_2 in
-							v)
-								curl -k --silent --connect-timeout 3 "$data/robots.txt"
-						esac
-					done
-				else
-					echo "No: $data"
+					echo "Found: $data/robots.txt" >> robots.txt
 				fi
 			done
+			count=$(cat robots.txt | wc -l || echo "" &>/dev/null)
+			echo "Found $count results"
+			rm robots.txt
 			;;
 		v)
 			subnet=$(echo "$2/24" | httpx -silent)
@@ -242,25 +239,22 @@ while getopts ":hucpswfrvg" menu; do
 					echo "Found: $data/robots.txt"
 					curl -k --silent --connect-timeout 3 $data/robots.txt
 					echo ""
-				else
-					echo "No: $data"
 				fi
 			done
 			;;
 			g)
-				trap 'rm global.txt || echo "" &>/dev/null ; rm count.txt || echo "" &>/dev/null; exit' INT
+				trap 'rm global.txt &>/dev/null; exit' INT
 				bash wordell_config_file_for_global_ip_scan.sh > global.txt
+				count=0
 				cat global.txt | while read parse_addreses; do
-                                country=$(curl -s ipinfo.io/$parse_addreses | jq ".country" | sed -e "s/\"//g" -e "s/\"/'/g")
-                                city=$(curl -s ipinfo.io/$parse_addreses | jq ".city" | sed -e "s/\"//g" -e "s/\"/'/g")
+				country=$(curl -s ipinfo.io/$parse_addreses | jq ".country" | sed -e "s/\"//g" -e "s/\"/'/g")
+				city=$(curl -s ipinfo.io/$parse_addreses | jq ".city" | sed -e "s/\"//g" -e "s/\"/'/g")
 				echo "[Country] $country [City] $city [IP] $parse_addreses"
-				echo "[Country] $country [City] $city [IP] $parse_addreses" >> count.txt
+				((count++))
 			done
 			echo ""
-			count=$(cat count.txt | wc -l)
 			echo "[i] Found $count results"
-			rm global.txt
-			rm count.txt
+			rm global.txt &> /dev/null
 			;;
 		\?)
 			ascii
